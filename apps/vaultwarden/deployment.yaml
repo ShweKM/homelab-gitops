@@ -29,7 +29,7 @@ spec:
             - name: DOMAIN
               value: "https://vault.apps.okd.lab.home"
             - name: SIGNUPS_ALLOWED
-              value: "true"     # set to false after you create your account
+              value: "false"     # set to false after you create your account
             - name: ADMIN_TOKEN
               valueFrom:
                 secretKeyRef:
