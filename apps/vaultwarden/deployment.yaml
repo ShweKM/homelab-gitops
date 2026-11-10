@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultwarden
+  namespace: vaultwarden
+  labels:
+    app: vaultwarden
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate          # RWO volume + SQLite: never run two pods at once
+  selector:
+    matchLabels:
+      app: vaultwarden
+  template:
+    metadata:
+      labels:
+        app: vaultwarden
+    spec:
+      containers:
+        - name: vaultwarden
+          image: docker.io/vaultwarden/server:1.37.4
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: ROCKET_PORT
+              value: "8080"
+            - name: DOMAIN
+              value: "https://vault.apps.okd.lab.home"
+            - name: SIGNUPS_ALLOWED
+              value: "false"     # set to false after you create your account
+            - name: ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vaultwarden-admin
+                  key: ADMIN_TOKEN
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /alive
+              port: http
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /alive
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vaultwarden-data

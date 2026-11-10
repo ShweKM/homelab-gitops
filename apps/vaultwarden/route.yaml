@@ -1,0 +1,15 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: vaultwarden
+  namespace: vaultwarden
+spec:
+  host: vault.apps.okd.lab.home
+  to:
+    kind: Service
+    name: vaultwarden
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
