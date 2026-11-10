@@ -1,0 +1,67 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: forgejo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: code.forgejo.org/forgejo-helm
+    chart: forgejo
+    targetRevision: 17.3.2
+    helm:
+      releaseName: forgejo
+      valuesObject:
+        image:
+          rootless: true
+        strategy:
+          type: Recreate
+        serviceAccount:
+          create: true
+          name: forgejo
+        persistence:
+          enabled: true
+          size: 20Gi
+          annotations:
+            argocd.argoproj.io/sync-options: Prune=false,Delete=false
+        route:
+          enabled: true
+          host: git.apps.okd.lab.home
+          tls:
+            termination: edge
+            insecureEdgeTerminationPolicy: Redirect
+        resources:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {memory: 1Gi}
+        gitea:
+          admin:
+            existingSecret: forgejo-admin
+            email: shwekm@gmail.com
+          additionalConfigFromEnvs:
+            - name: FORGEJO__DATABASE__PASSWD
+              valueFrom:
+                secretKeyRef: {name: forgejo-db, key: password}
+          config:
+            server:
+              DOMAIN: git.apps.okd.lab.home
+              ROOT_URL: https://git.apps.okd.lab.home/
+            database:
+              DB_TYPE: postgres
+              HOST: forgejo-db:5432
+              NAME: forgejo
+              USER: forgejo
+            cache:
+              ADAPTER: memory
+            session:
+              PROVIDER: db
+            queue:
+              TYPE: level
+            service:
+              DISABLE_REGISTRATION: true
+            webhook:
+              ALLOWED_HOST_LIST: private   # lets webhooks reach Tekton inside the cluster (Part 4)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: forgejo
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
